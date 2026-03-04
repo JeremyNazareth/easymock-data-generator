@@ -7,7 +7,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-     
+      <meta name="color-scheme" content="light dark" />
       <body className="relative">
         <div className="w-xs h-screen fixed p-10 bg-layout">
           <main>
