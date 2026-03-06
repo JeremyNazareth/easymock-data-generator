@@ -7,6 +7,9 @@
 
 @theme {
   --color-primary: #3A3B46;
+  --color-secondary: #424457;
+  --color-layout: #30303C;
+  --color-content: #53556E;
 }
 
 @theme inline {
