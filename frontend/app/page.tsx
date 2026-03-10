@@ -1,22 +1,23 @@
-import Image from "next/image";
-import { MoveRight, MoveLeft, UserRound } from "lucide-react";
+
+import { MoveRight, MoveLeft, UserRound, House } from "lucide-react";
+import Index from "./components/index"
+
 export default function Home() {
   return (
     <div className="flex min-h-screen ml-80 dark:bg-primary">
       <main className="w-full py-2 px-4 flex flex-col gap-2">
         <div className="flex items-center gap-2 max-w-250">
           <div className="label">
-            <p>
-              <MoveLeft />
-            </p>
+            <MoveLeft />
           </div> 
           <div className="label">
-            <p>
-              <MoveRight />
-            </p>
+            <House />
           </div>
+          <div className="label">
+            <MoveRight />
+          </div> 
           <div className="w-full h-8.75">
-            <p className="label flex">Hospital/Clientes/<p className="flex gap-1"><UserRound size={18} />Persona</p></p>
+            <span className="label flex">Hospital/Clientes/<p className="flex gap-1"><UserRound size={18} />Persona</p></span>
           </div>
         </div>
         <div className="flex gap-2">
@@ -35,6 +36,7 @@ export default function Home() {
           </li>
         </ul>
       </main>
+      <Index></Index>
     </div>
   );
 }
