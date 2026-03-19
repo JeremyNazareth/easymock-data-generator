@@ -12,7 +12,7 @@ export default function RootLayout({
     <html lang="en">
       <meta name="color-scheme" content="light dark" />
       <body className="relative">
-        <SideBar></SideBar>
+        
         {children}
       </body>
     </html>
