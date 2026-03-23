@@ -44,58 +44,63 @@ export default function Home() {
   const searchParams = useSearchParams();
 
   const [currentFile, setCurrentFile] = useState(files[0]);
-  const [currentFileParent, setCurrentParenFile] = useState("0");
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
-  const [currentFolderHistory, setCurrentFolderHistory] = useState(0);
-  const countHistoryRef = useRef(0)
-
+  const [previousFolderHistory, setPreviousFolderHistory] = useState<string[]>([]);
+  const [previousHistoryActive, setPreviousHistoryActive] = useState(false);
+  const countHistoryRef = useRef(0);
+  const countPrevious = useRef(0);
   const routeFile = searchParams.get('file');
-  
 
   const handleRoute = (fileId:string, saveToHistory:boolean) =>{
     router.push(`?file=${fileId}`);
     const parentId = files.find((file => file.id === fileId))?.parentId; 
     if(saveToHistory){
       //const parentFile = files.find
-      console.log("fileId: " + fileId + "ParentId: " + parentId);
+      setPreviousHistoryActive(false);
       if(fileId != folderHistory[folderHistory.length - 1]){
         setFolderHistory([...folderHistory, parentId || "root"] )
       }
-      
+    } else{
+      setPreviousHistoryActive(true);
     }
   }
 
-  const handleHistory = ( previus:boolean) =>{
+  const handleHistoryFile = () =>{
+    handleRoute(folderHistory[countHistoryRef.current], false);
+  }
 
-    if(previus){
+  const handleHistory = ( previous:boolean) =>{
+    
+    if(previous){
       if(folderHistory)
-      countHistoryRef.current -= 1;  
-      console.log("HandleHistory " + countHistoryRef.current)
-      handleRoute(files[countHistoryRef.current].id, false);
-      console.log(`CurrentFolderHistory: ` + currentFolderHistory)
+      countHistoryRef.current -= 1;
+      setPreviousHistoryActive(true);
+      setPreviousFolderHistory([...previousFolderHistory, routeFile || 'unknown'])
+      handleRoute(folderHistory[countHistoryRef.current], false);
+    } else{
+      countPrevious.current -= 1;
+      countHistoryRef.current = folderHistory.length;
+      handleRoute(previousFolderHistory[countPrevious.current], false);
     }
   }
 
+  const debuggin = () =>{
+    console.log("=========================================")
+    console.log("PreviousHistory " + previousFolderHistory + " PrevRef " + countPrevious.current)
+    console.log("FolderHistory " + folderHistory + " Ref " + countHistoryRef.current);
+    console.log(previousHistoryActive)
+  }
   useEffect(() =>{
-    countHistoryRef.current = folderHistory.length
-    console.log("FolderHistory Reset " + countHistoryRef.current)
+    countHistoryRef.current = folderHistory.length;
   },[folderHistory])
 
+  useEffect(() =>{
+    countPrevious.current = previousFolderHistory.length;
+  }, [previousFolderHistory])
   useEffect(() => {
     setCurrentFile(files.find((file => routeFile  === file.id)) || { id:'0',name: 'home',parentId: null })
-    /*
-    console.log('search');
-    console.log(`RouteFile: ` + routeFile);
-    console.log("Agregando " + folderHistory + " FolderSelector:" + countHistory)
-    */
-    console.log(folderHistory);
   }, [searchParams])
 
-
-  useEffect(() =>{
-    console.log("Count History:" + countHistoryRef);
-  },[countHistoryRef])
-  
   return (
     <>
       <SideBar files={files}></SideBar>
@@ -110,9 +115,10 @@ export default function Home() {
               <House />
             </div>
 
-            <div className="label">
+            <button className="label" onClick={() => handleHistory(false)} disabled={previousHistoryActive}>
               <MoveRight />
-            </div> 
+            </button>
+
             <div className="w-full h-8.75">
               <span className="label flex">Hospital/Clientes/<p className="flex gap-1">{currentFile.name}</p></span>
             </div>
@@ -138,7 +144,8 @@ export default function Home() {
                     <p key={file.id} onClick={() => handleRoute(file.id,true)}>{file.name}</p>
                 )))}
             </div>
-            </div>
+            <button onClick={() => debuggin()}>Debug</button>
+          </div>
         </main>
       </div>
     </>
