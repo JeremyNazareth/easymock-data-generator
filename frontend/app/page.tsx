@@ -4,6 +4,7 @@ import SideBar from "./components/sideBar"
 import { useState, useEffect, useRef } from "react";
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { count } from "console";
 
 export default function Home() {
 
@@ -12,6 +13,7 @@ export default function Home() {
     name: string | null,
     parentId: string | null
   }
+
   const files =[
     {
       id:'0',
@@ -46,7 +48,8 @@ export default function Home() {
   const [currentFile, setCurrentFile] = useState(files[0]);
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
   const [previousFolderHistory, setPreviousFolderHistory] = useState<string[]>([]);
-  const [previousHistoryActive, setPreviousHistoryActive] = useState(false);
+  const [previousBtnDisabled, setPreviousBtnDisabled] = useState(true);
+  const [previousHistoryDisabled, setPreviousHistoryDisabled] = useState(true);
   const countHistoryRef = useRef(0);
   const countPrevious = useRef(0);
   const routeFile = searchParams.get('file');
@@ -55,48 +58,64 @@ export default function Home() {
     router.push(`?file=${fileId}`);
     const parentId = files.find((file => file.id === fileId))?.parentId; 
     if(saveToHistory){
-      //const parentFile = files.find
-      setPreviousHistoryActive(false);
-      if(fileId != folderHistory[folderHistory.length - 1]){
+      console.log(countHistoryRef.current + " " + folderHistory.length);
+      setPreviousBtnDisabled(false);
+      setPreviousHistoryDisabled(true);
+      if(fileId != folderHistory[folderHistory.length - 1] && parentId != folderHistory[folderHistory.length - 1]){
+        console.log(fileId + " saving " + folderHistory[folderHistory.length - 1])
         setFolderHistory([...folderHistory, parentId || "root"] )
       }
     } else{
-      setPreviousHistoryActive(true);
+      setPreviousHistoryDisabled(false);
+      setPreviousBtnDisabled(true);
     }
   }
 
   const handleHistoryFile = () =>{
     handleRoute(folderHistory[countHistoryRef.current], false);
   }
-
+                                         
   const handleHistory = ( previous:boolean) =>{
-    
     if(previous){
       if(folderHistory)
       countHistoryRef.current -= 1;
-      setPreviousHistoryActive(true);
+      setPreviousHistoryDisabled(false);
       setPreviousFolderHistory([...previousFolderHistory, routeFile || 'unknown'])
+      console.log("HandleFunction " + countHistoryRef.current)
       handleRoute(folderHistory[countHistoryRef.current], false);
+
+      if(countHistoryRef.current <= 0 ){
+        setPreviousBtnDisabled(true);
+        console.log("HandleHistory false")
+      } else{
+        setPreviousBtnDisabled(false);
+      }
+
     } else{
-      countPrevious.current -= 1;
-      countHistoryRef.current = folderHistory.length;
-      handleRoute(previousFolderHistory[countPrevious.current], false);
+      countHistoryRef.current += 1;
+      handleRoute(folderHistory[countHistoryRef.current], false);
+      if(countHistoryRef.current === folderHistory.length -1 ){
+        setPreviousHistoryDisabled(true);
+        setPreviousBtnDisabled(false);
+      } else{
+        setPreviousHistoryDisabled(false);
+      }
     }
   }
 
   const debuggin = () =>{
     console.log("=========================================")
-    console.log("PreviousHistory " + previousFolderHistory + " PrevRef " + countPrevious.current)
-    console.log("FolderHistory " + folderHistory + " Ref " + countHistoryRef.current);
-    console.log(previousHistoryActive)
+    console.log("FolderHistory " + folderHistory + " FolderLenght " + folderHistory.length);
+    console.log(previousHistoryDisabled + " Ref " + countHistoryRef.current)
   }
+
   useEffect(() =>{
     countHistoryRef.current = folderHistory.length;
   },[folderHistory])
-
   useEffect(() =>{
     countPrevious.current = previousFolderHistory.length;
-  }, [previousFolderHistory])
+  },[previousFolderHistory])
+
   useEffect(() => {
     setCurrentFile(files.find((file => routeFile  === file.id)) || { id:'0',name: 'home',parentId: null })
   }, [searchParams])
@@ -107,15 +126,15 @@ export default function Home() {
       <div className="flex min-h-screen ml-80 dark:bg-primary">
         <main className="w-full py-2 px-4 flex flex-col gap-2">
           <div className="flex items-center gap-2 max-w-250">
-            <div className="label" onClick={() => handleHistory(true)}>
+            <button className="label disabled:bg-amber-950" onClick={() => handleHistory(true)} disabled={previousBtnDisabled}>
               <MoveLeft />
-            </div> 
+            </button> 
 
             <div className="label" onClick={() => handleRoute("0",true)}>
               <House />
             </div>
 
-            <button className="label" onClick={() => handleHistory(false)} disabled={previousHistoryActive}>
+            <button className="label disabled:bg-amber-950" onClick={() => handleHistory(false)} disabled={previousHistoryDisabled}>
               <MoveRight />
             </button>
 
@@ -137,15 +156,13 @@ export default function Home() {
             )))}
           </ul>
 
-          <div className="w-full items-center">
-            <p>Folder id:{currentFile.id} folder id:{searchParams.get("file")} </p>
-            <div className="flex gap-2">
-                {files.map((file => (
-                    <p key={file.id} onClick={() => handleRoute(file.id,true)}>{file.name}</p>
-                )))}
-            </div>
-            <button onClick={() => debuggin()}>Debug</button>
+          <div className="w-full items-center flex gap-1">
+            {folderHistory.map((folder, index) => (
+              <p key={index}>{folder}</p>
+            ))}
           </div>
+          <p>{countHistoryRef.current}</p>
+          <button className="w-fit" onClick={() => debuggin()}>Debug</button>
         </main>
       </div>
     </>
