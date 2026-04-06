@@ -43,7 +43,6 @@ export default function Home() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const [currentFile, setCurrentFile] = useState(files[0]);
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
   const [countHistory, setCountHistory] = useState<number | null>(null);
@@ -61,8 +60,6 @@ export default function Home() {
         setFolderHistory([...folderHistory, parentId || "root"] )
       }
       countRef.current = folderHistory.length
-    } else{
-      
     }
   }
                                          
@@ -70,33 +67,35 @@ export default function Home() {
     if(folderHistory && countRef.current != null)
     {
       if(previous){
-        if(countRef.current === folderHistory.length -1)
-          setFolderHistory([...folderHistory, routeFile || "root"] )
-
-        countRef.current -= 1;
+        if(countRef.current === folderHistory.length - 1){
+          handleRoute(folderHistory[countRef.current],false);
+          setFolderHistory([...folderHistory, routeFile || "root"])        
+        } else{
+          countRef.current -= 1;
+          handleRoute(folderHistory[countRef.current],false);
+        }
+        
       } else{
         countRef.current += 1;
+        handleRoute(folderHistory[countRef.current],false);
       } 
-      handleRoute(folderHistory[countRef.current],false);
+      
     }   
   }
 
   useEffect(() =>{  
     if(countRef.current != null){
-      if(countRef.current <= 0){
+      if(countRef.current < 0 || (countRef.current === 0 &&  folderHistory.length > 0)){
         setPreviousBtnDisabled(true);
       } else {
         setPreviousBtnDisabled(false);
-      }
-        
+      }    
     if(countRef.current >= folderHistory.length - 1 || folderHistory.length === 0)
       setPreviousHistoryDisabled(true)
       else{
         setPreviousHistoryDisabled(false);
       }
     }
-      
-   
   })
 
   const debuggin = () =>{
@@ -104,10 +103,6 @@ export default function Home() {
     console.log("FolderHistory " + folderHistory + " FolderLenght " + folderHistory.length);
     console.log(countRef.current)
   }
-
-  useEffect(() =>{
-    
-  },[folderHistory])
 
   useEffect(() => {
     setCurrentFile(files.find((file => routeFile  === file.id)) || { id:'0',name: 'home',parentId: null })
