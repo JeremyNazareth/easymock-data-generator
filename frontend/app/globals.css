@@ -8,12 +8,13 @@
 
 .test{
   color: #31323b;
-  color: #3f3f53;
+  color: #39394d;
 }
 
 @theme {
   --color-primary: #31323b;
   --color-secondary: #3f3f53;
+  --color-disabled: #39394d;
   --color-layout: #3f3f53;
   --color-content: #53556E;
   --font-family-primary: "JetBrains Mono", monospace;

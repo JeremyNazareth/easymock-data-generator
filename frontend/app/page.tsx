@@ -2,7 +2,6 @@
 import { MoveRight, MoveLeft, UserRound, House } from "lucide-react";
 import SideBar from "./components/sideBar"
 import { useState, useEffect, useRef } from "react";
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function Home() {
@@ -45,10 +44,10 @@ export default function Home() {
   const searchParams = useSearchParams();
   const [currentFile, setCurrentFile] = useState(files[0]);
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
-  const [countHistory, setCountHistory] = useState<number | null>(null);
-  let countRef = useRef(countHistory);
+  let countRef = useRef<null | number>(null);
   const [previousBtnDisabled, setPreviousBtnDisabled] = useState(true);
   const [previousHistoryDisabled, setPreviousHistoryDisabled] = useState(true);
+  const [contextMenu, setContextmenu] = useState({visible: false, posX:0, posY:0})
   const routeFile = searchParams.get('file');
 
   const handleRoute = (fileId:string, saveToHistory:boolean) =>{
@@ -98,6 +97,12 @@ export default function Home() {
     }
   })
 
+
+  const handleContextMenu = (event) =>{
+    event.preventDefault();
+    console.log(event.clientX, event.clientY);
+    setContextmenu({visible:true, posX: event.clientX, posY: event.clientY});
+  }
   const debuggin = () =>{
     console.log("=========================================")
     console.log("FolderHistory " + folderHistory + " FolderLenght " + folderHistory.length);
@@ -109,7 +114,13 @@ export default function Home() {
   }, [searchParams])
   
   return (
-    <>
+    <div onContextMenu={(e) => handleContextMenu(e)} onClick={() => setContextmenu({visible:false})}>
+      <ul className="fixed bg-layout [&>li]:py-2 [&>li]:px-8 rounded-[7px]" 
+      style={{top: contextMenu.posY, left: contextMenu.posX}}>
+        <li>Crear carpeta</li>
+        <li>Editar Archivo</li>
+        <li>Eliminar Archivo</li>
+      </ul>
       <SideBar files={files}></SideBar>
       <div className="flex min-h-screen ml-80 dark:bg-primary">
         <main className="w-full py-2 px-4 flex flex-col gap-2">
@@ -153,7 +164,7 @@ export default function Home() {
           <button className="w-fit" onClick={() => debuggin()}>Debug</button>
         </main>
       </div>
-    </>
+    </div>
     
   );
 }
