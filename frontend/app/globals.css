@@ -43,6 +43,26 @@
   .files-navegator li{
     padding: 0.4rem 0.7rem;
   }
+
+  .interactive:hover{
+    box-shadow: inset 0 0 0 2px cyan;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  .interactive:disabled{
+    box-shadow: inset 0 0 0 0px cyan;
+  }
+
+  .interactive-list li:hover{
+    box-shadow: inset 0 0 0 2px cyan;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  .interactive-list:disabled{
+    box-shadow: inset 0 0 0 0px cyan;
+  }
 }
 
 

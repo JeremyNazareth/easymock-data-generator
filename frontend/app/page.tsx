@@ -1,145 +1,294 @@
 "use client"
-import { MoveRight, MoveLeft, UserRound, House } from "lucide-react";
+import { MoveRight, MoveLeft, UserRound, House, FolderPlus, FilePlusCorner, X, Folder, File } from "lucide-react";
 import SideBar from "./components/sideBar"
+import ContextualMenu from "./components/contextualMenu";
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { Person } from './interfaces/index'
+import  MockLayout  from './components/mockLayout'
+export interface Folder{
+  id: string | null,
+  name: string | null,
+  parentId: string | null
+}
+
+export interface Mock{
+  id: string,
+  name: string,
+  parentId: string
+}
+
+export interface Files{
+  folders: Folder[],
+  mocks: Mock[]
+}
 
 export default function Home() {
 
-  interface File{
-    id: string,
-    name: string | null,
-    parentId: string | null
-  }
-
-  const files = [
-    {
-      id:'0',
-      name: 'home',
-      parentId: null
-    },
-    {
-      id: '1',
-      name: 'carpeta1',
-      parentId: '0',
-    },
-    {
-      id: '2',
-      name: 'carpeta2',
-      parentId: '1'
-    },
-    {
-      id: '3',
-      name: 'carpeta5',
-      parentId: '1'
-    },
-    {
-      id: '4',
-      name: 'carpeta99',
-      parentId: '3'
-    }
+  const testFolders = [
+    { id: '0', name: 'root', parentId: null},
+    { id: '1',name: 'carpeta1', parentId: '0'},
+    { id: '2',name: 'carpeta2', parentId: '1'},
+    { id: '3', name: 'carpeta5', parentId: '1'},
+    { id: '4', name: 'carpeta99', parentId: '3'}
   ]
+
+  const testMocks = [
+    {id: "0", name: "mock1",parentId:"1"},
+    {id: "1", name: "mock2",parentId:"1"},
+    {id: "2", name: "mock3",parentId:"0"},
+    {id: "3", name: "mock4",parentId:"3"},
+    {id: "4", name: "mock1",parentId:"0"},
+  ]
+
+  const files = useRef<Files>(
+    { folders:[], mocks:[]}
+  )
+
+  const [mockDataList, setMockDataList] = useState<Object[]>([]);
+
+  const filterFilesRef = useRef<Files>({folders:[],mocks:[]})
+  const [filterFolder, setFilterFolder] = useState<Folder[]>([]);
+  const [filterMocks, setFilterMocks] = useState<Mock[]>([]);
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [currentFile, setCurrentFile] = useState(files[0]);
-  const [folderHistory, setFolderHistory] = useState<string[]>([]);
-  let countRef = useRef<null | number>(null);
-  const [previousBtnDisabled, setPreviousBtnDisabled] = useState(true);
-  const [previousHistoryDisabled, setPreviousHistoryDisabled] = useState(true);
-  const [contextMenu, setContextmenu] = useState({visible: false, posX:0, posY:0})
-  const routeFile = searchParams.get('file');
+  const routeFileId = searchParams.get('file');
+  const routeFileRef = useRef<Folder>({ id:'0', name: 'root', parentId: null})
+  const [currentFile, setCurrentFile] = useState(routeFileRef.current || { id:'0', name: 'default', parentId: null})
 
-  const handleRoute = (fileId:string, saveToHistory:boolean) =>{
-    router.push(`?file=${fileId}`);
-    const parentId = files.find((file => file.id === fileId))?.parentId; 
-    if(saveToHistory){
-      
-      if(fileId != folderHistory[folderHistory.length - 1] && parentId != folderHistory[folderHistory.length - 1]){
-        setFolderHistory([...folderHistory, parentId || "root"] )
-      }
-      countRef.current = folderHistory.length
+  //History buttons
+  const [folderHistory, setFolderHistory] = useState<string[]>([]);
+  const [previousBtnDisabled, setPreviousBtnDisabled] = useState(true);
+  const [previousHistoryBtnDisabled, setPreviousHistoryBtnDisabled] = useState(true);
+  //Contextual Menu
+  const [contextMenu, setContextMenu] = useState({visible: false, posX:0, posY:0})
+  const [menuLabels, setMenuLabels] = useState<{label: string, action: Function | null}[]>([]);
+  const selectedObjectRef = useRef<Folder>({id:null,name:null,parentId:null});
+  
+  filterFilesRef.current.folders = files.current.folders.filter(folder => folder.id === routeFileRef.current.parentId)
+  let countRef = useRef<null | number>(null);
+
+  const handleRoute = (nextId:string, saveId:string | null) =>{
+    if(saveId && saveId != folderHistory[folderHistory.length - 1]){
+      setFolderHistory([...folderHistory, saveId || "root"])
+      countRef.current = folderHistory.length + 1;
+    }
+
+    router.push(`?file=${nextId}`);
+    if(countRef.current != 0){
+      setPreviousBtnDisabled(false)
     }
   }
+  const settingLayoutValues = ( values ) =>{
+    setCurrentLayout(values)
+  }
+ 
+  const settingMocksList = ( mock ) =>{
+    setMockDataList([...mockDataList, mock])
+  }
+  const handleInitialize = () =>{
+ 
+    files.current.folders = testFolders
+    files.current.mocks = testMocks
+
+    console.log("inicializando")
+    if(routeFileId === null){
+      filterFilesRef.current.folders = files.current.folders.filter(folder => folder.parentId === "0")
+      setFilterFolder(filterFilesRef.current.folders)
+      filterFilesRef.current.mocks = files.current.mocks.filter(mock => mock.parentId === "0")
+      setFilterMocks(filterFilesRef.current.mocks)
+    }
+  }
+
+  useEffect(() =>{
+    routeFileRef.current = files.current.folders.find(file => file.id === routeFileId) || { id:'0', name: '?', parentId: null}
+    filterFilesRef.current.folders = files.current.folders.filter(folder => folder.parentId === routeFileId)
+    filterFilesRef.current.mocks = files.current.mocks.filter(mock => mock.parentId === routeFileId)
+
+    setFilterFolder(filterFilesRef.current.folders)
+    setFilterMocks(filterFilesRef.current.mocks)
+    setCurrentFile(routeFileRef.current)
+    setEditFGUI(false);
+  },[searchParams])
+
+  //GUI
+  const [createFGUI, setCreateFGUI] = useState(false);
+  const [editFGUI, setEditFGUI] = useState(false);
+  const [createFileGUI, setCreateFileGUI] = useState(false);
+
+  const [currentLayout, setCurrentLayout] = useState<any>([]);
+
+  const createFolder = () =>{
+    const folderName = document.getElementById('folderName') as HTMLInputElement;
+    if(folderName){
+      const newFolder = 
+      {
+        id: files.current.folders.length.toString(),
+        name: folderName.value,
+        parentId: routeFileId
+      }
+    
+      files.current.folders = [...files.current.folders, newFolder]
+      folderName.value = "";
+    }
+  }
+  
+  const editEnter = ( e ) =>{
+    const folderEditInput = document.getElementById('folderEditInput') as HTMLInputElement;
+    if(e.key === 'Enter')
+    {
+      const selectedFolder = files.current.folders.findIndex(folder => folder.id === selectedObjectRef.current.id)
+      files.current.folders[selectedFolder] = {...files.current.folders[selectedFolder], name:folderEditInput.value}
+      filterFilesRef.current.folders = files.current.folders.filter(folder => folder.parentId === routeFileId)
+      setFilterFolder(filterFilesRef.current.folders)
+      setEditFGUI(false);
+    }
+  }
+
+  const deleteFolder = () =>{
+    console.log("-")
+    console.log(files.current, selectedObjectRef.current.id)
+    //setFiles(files.filter(folder => folder.id !== selectedObjectRef.current.id))
+    console.log(files.current)
+  }
+
+  const generalList = [
+    { label: "Crear carpeta", action:setCreateFGUI },
+    { label: "Crear archivo", action:setCreateFileGUI }
+  ]
+
+  const folderMenuList =[
+    { label: "Editar carpeta", action:setEditFGUI },
+    { label: "Eliminar carpeta", action:deleteFolder}
+  ]
+  
+  const mockMenuList =[
+    { label: "Editar Mock", action:null},
+    { label: "Eliminar Mock", action:null }
+  ]
                                          
   const handleHistory = ( previous:boolean) =>{
     if(folderHistory && countRef.current != null)
     {
       if(previous){
-        if(countRef.current === folderHistory.length - 1){
-          handleRoute(folderHistory[countRef.current],false);
-          setFolderHistory([...folderHistory, routeFile || "root"])        
-        } else{
-          countRef.current -= 1;
-          handleRoute(folderHistory[countRef.current],false);
+        if(countRef.current === folderHistory.length  && routeFileId != folderHistory[folderHistory.length - 1]){
+          setFolderHistory([...folderHistory, routeFileId || "root"])
         }
-        
+        countRef.current -= 1;
+        handleRoute( folderHistory[countRef.current] || 'unkown', null);
+
       } else{
         countRef.current += 1;
-        handleRoute(folderHistory[countRef.current],false);
+        handleRoute( folderHistory[countRef.current] || 'unkown', null);
       } 
-      
-    }   
+    } 
   }
 
   useEffect(() =>{  
-    if(countRef.current != null){
-      if(countRef.current < 0 || (countRef.current === 0 &&  folderHistory.length > 0)){
-        setPreviousBtnDisabled(true);
-      } else {
-        setPreviousBtnDisabled(false);
-      }    
-    if(countRef.current >= folderHistory.length - 1 || folderHistory.length === 0)
-      setPreviousHistoryDisabled(true)
-      else{
-        setPreviousHistoryDisabled(false);
-      }
+    if(folderHistory.length != 0 && countRef.current != 0){
+      setPreviousBtnDisabled(false)
+    } else{
+      setPreviousBtnDisabled(true)
     }
+
+    if(folderHistory.length === 0 || (countRef.current === folderHistory.length - 1 || countRef.current === folderHistory.length)){
+      setPreviousHistoryBtnDisabled(true);
+    } else{
+      setPreviousHistoryBtnDisabled(false);
+    }
+
   })
 
-
-  const handleContextMenu = (event) =>{
-    event.preventDefault();
-    console.log(event.clientX, event.clientY);
-    setContextmenu({visible:true, posX: event.clientX, posY: event.clientY});
-  }
   const debuggin = () =>{
     console.log("=========================================")
-    console.log("FolderHistory " + folderHistory + " FolderLenght " + folderHistory.length);
-    console.log(countRef.current)
+    console.log(menuLabels)
+    console.log(routeFileRef.current)
+    console.log(selectedObjectRef.current, files.current)
+    console.log(filterFilesRef.current)
+    console.log(currentLayout)
   }
 
-  useEffect(() => {
-    setCurrentFile(files.find((file => routeFile  === file.id)) || { id:'0',name: 'home',parentId: null })
-  }, [searchParams])
-  
+  const handleContextMenu = (e, labelList, selectedObject) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ visible: true, posX: e.clientX, posY: e.clientY });
+    setMenuLabels(labelList);
+    selectedObjectRef.current = selectedObject
+  };
+
+  const handleClick = () => {
+    setContextMenu({ visible: false, posX: 0, posY: 0 });
+  };
+
+  useEffect(() =>{
+    handleInitialize()
+    window.addEventListener('click', handleClick)
+    setEditFGUI(false);
+  },[])
+
+
+  async function mockData() {
+    try {
+      const response = await fetch('https://fakerapi.it/api/v2/books?_quantity=5?_seed=1')
+      const data = await response.json();
+      setMockDataList(data.data)
+      console.log(data)
+    } catch (error){
+      console.log(error)
+    }
+  }
+
+
   return (
-    <div onContextMenu={(e) => handleContextMenu(e)} onClick={() => setContextmenu({visible:false})}>
-      <ul className="fixed bg-layout [&>li]:py-2 [&>li]:px-8 rounded-[7px]" 
+    <div>
+      {/*Interfaces*/}
+      <ul className={`interactive-list bg-layout [&>li]:py-2 [&>li]:px-8 [&>li]:interactive rounded-[7px] z-1 ${contextMenu.visible ? "fixed" : "hidden"} z-50`}
       style={{top: contextMenu.posY, left: contextMenu.posX}}>
-        <li>Crear carpeta</li>
-        <li>Editar Archivo</li>
-        <li>Eliminar Archivo</li>
+        <ContextualMenu menuList={menuLabels} selectedObject={selectedObjectRef.current}></ContextualMenu>
       </ul>
-      <SideBar files={files}></SideBar>
+
+      <MockLayout settingMocksList={settingMocksList}></MockLayout>
+      <div className={`fixed label top-50 left-100 z-1 px-2
+        transition-all duration-150 ease-in-out ${createFGUI ? "opacity-100" : "opacity-0 hidden"}`}>
+        <div className="flex justify-between items-center mx-1 mb-1">
+          <p className="py-1">Crear Carpeta</p>
+          <X className="bg-red-400 rounded-[7px]" onClick={() => setCreateFGUI(false)} />
+        </div>
+        
+        <input type="text" id="folderName" className="bg-primary rounded-[7px] px-2 py-1 block" placeholder="Nombre de la carpeta" name="folderName" />
+        <button className="text-center interactive bg-green-700 rounded-[7px] w-full mt-3" onClick={() => createFolder()}>Crear</button>
+      </div>
+      <div>
+
+      </div>
+      <SideBar files={files.current.folders}></SideBar>
       <div className="flex min-h-screen ml-80 dark:bg-primary">
-        <main className="w-full py-2 px-4 flex flex-col gap-2">
+        <main className="max-w-250 w-full py-2 px-4 flex flex-col gap-2">
           <div className="flex items-center gap-2 max-w-250">
-            <button className="label disabled:bg-amber-950" onClick={() => handleHistory(true)} disabled={previousBtnDisabled}>
+            <button className="label interactive disabled:bg-amber-950" onClick={() => handleHistory(true)} disabled={previousBtnDisabled}>
               <MoveLeft />
             </button> 
 
-            <div className="label" onClick={() => handleRoute("0",true)}>
+            <div className="label interactive" onClick={() => handleRoute("0",routeFileId)}>
               <House />
             </div>
 
-            <button className="label disabled:bg-amber-950" onClick={() => handleHistory(false)} disabled={previousHistoryDisabled}>
+            <button className="label interactive disabled:bg-amber-950" onClick={() => handleHistory(false)} disabled={previousHistoryBtnDisabled}>
               <MoveRight />
             </button>
 
             <div className="w-full h-8.75">
-              <span className="label flex">Hospital/Clientes/<p className="flex gap-1">{currentFile.name}</p></span>
+              <span className="label flex interactive">Hospital/Clientes/<p className="flex gap-1">{currentFile.name}</p></span>
             </div>
+
+            <button className="label interactive" onClick={() => setCreateFGUI(true)}>
+              <FolderPlus />
+            </button>
+
+            <button className="label">
+              <FilePlusCorner />
+            </button>
           </div>
 
           <div className="flex gap-2">
@@ -147,21 +296,41 @@ export default function Home() {
             <div className="label w-fit"><p className="flex items-center gap-1">32 <UserRound size={20} />Personas</p> </div>
           </div>
 
-          <ul className="files-navegator max-w-250 flex flex-col rounded-[7px] overflow-hidden">
-            {files.filter(file => file.parentId === routeFile).map(((children, index) => (
-                <li key={index} className={` ${ index%2 ?  'bg-content': 'bg-layout'}`}>
-                    <p className="flex gap-1.5" onClick={() => handleRoute(children.id,true)}> <UserRound size={20}/> {children.name} id:{children.id}</p>
-                </li>
+          <ul className="files-navegator max-w-250 flex flex-col overflow-hidden bg-layout min-h-[500px] rounded-[7px]" onContextMenu={(e) => handleContextMenu(e,generalList,null)}>
+            {filterFolder.map(((folderChild, index) => (
+              <li key={index} onClick={() => {handleRoute(folderChild.id, currentFile.id)}}  onContextMenu={ (e) => handleContextMenu(e, folderMenuList, folderChild)}
+              className={` 
+                ${ index%2 ?  'bg-content': 'bg-layout'}
+                ${ filterFolder.length === 1 ? "rounded-[7px] " : ""}
+                ${ filterFolder.length > 1 && index === 0 ? "rounded-t-[7px]" : ""}
+                ${ filterFolder.length > 1 && index === filterFolder.length - 1 ? "rounded-b-[7px]" : ""}
+              border-2 border-transparent
+              hover:border-2 hover:border-cyan-500`}>
+                {editFGUI && folderChild.id === selectedObjectRef.current.id ? 
+                ( 
+                  <input id="folderEditInput" onBlur={() => setEditFGUI(false)} autoFocus type="text" onClick={(e) => e.stopPropagation()}  onKeyDown={( e ) => editEnter(e)} />                    
+                ): 
+                ( 
+                  <p className="flex gap-1.5"> <Folder size={20}/> {folderChild.name} id:{folderChild.id}</p>
+                )}
+              </li>
             )))}
+            {
+              filterMocks.map((mock, index) => (
+                <li className="flex gap-1.5" key={index} onContextMenu={(e) => handleContextMenu(e, mockMenuList, mock)}> <File size={20}/> {mock.name + " id:" + mock.id}</li>
+              ))
+            }
           </ul>
-
-          <div className="w-full items-center flex gap-1">
-            {folderHistory.map((folder, index) => (
-              <p key={index}>{folder}</p>
-            ))}
-          </div>
-
+          
           <button className="w-fit" onClick={() => debuggin()}>Debug</button>
+          <button onClick={() => mockData()}> MockData</button>
+          <ul>Mock Data list</ul>
+          {mockDataList.map( mockData => (
+            <li>
+              <p>{mockData.id} {mockData.firstname}</p>
+            </li>
+            
+          ))}
         </main>
       </div>
     </div>
