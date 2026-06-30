@@ -4,8 +4,11 @@ import SideBar from "./components/sideBar"
 import ContextualMenu from "./components/contextualMenu";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { Person } from './interfaces/index'
+import { Person, FakerPerson } from './interfaces/index'
 import  MockLayout  from './components/mockLayout'
+import { initialize } from "next/dist/server/lib/render-server";
+import { mock } from "node:test";
+
 export interface Folder{
   id: string | null,
   name: string | null,
@@ -41,11 +44,10 @@ export default function Home() {
     {id: "4", name: "mock1",parentId:"0"},
   ]
 
-  const files = useRef<Files>(
-    { folders:[], mocks:[]}
-  )
-
-  const [mockDataList, setMockDataList] = useState<Object[]>([]);
+  const files = useRef<Files>({ folders:[], mocks:[]})
+  const [currentFiles, setCurrentFiles] = useState<Files>({folders:[],mocks:[]});
+   
+  const [mockDataList, setMockDataList] = useState<FakerPerson[]>([]);
 
   const filterFilesRef = useRef<Files>({folders:[],mocks:[]})
   const [filterFolder, setFilterFolder] = useState<Folder[]>([]);
@@ -66,7 +68,6 @@ export default function Home() {
   const [menuLabels, setMenuLabels] = useState<{label: string, action: Function | null}[]>([]);
   const selectedObjectRef = useRef<Folder>({id:null,name:null,parentId:null});
   
-  filterFilesRef.current.folders = files.current.folders.filter(folder => folder.id === routeFileRef.current.parentId)
   let countRef = useRef<null | number>(null);
 
   const handleRoute = (nextId:string, saveId:string | null) =>{
@@ -80,24 +81,31 @@ export default function Home() {
       setPreviousBtnDisabled(false)
     }
   }
+  
   const settingLayoutValues = ( values ) =>{
     setCurrentLayout(values)
   }
  
-  const settingMocksList = ( mock ) =>{
-    setMockDataList([...mockDataList, mock])
+  const settingMocksList = ( mockList ) =>{
+    console.log(currentFiles)
+    setCurrentFiles({folders:[...currentFiles.folders], mocks:[...currentFiles.mocks,...mockList]})
+    setMockDataList([...mockDataList, ...mockList])
   }
-  const handleInitialize = () =>{
- 
-    files.current.folders = testFolders
-    files.current.mocks = testMocks
 
-    console.log("inicializando")
-    if(routeFileId === null){
-      filterFilesRef.current.folders = files.current.folders.filter(folder => folder.parentId === "0")
-      setFilterFolder(filterFilesRef.current.folders)
-      filterFilesRef.current.mocks = files.current.mocks.filter(mock => mock.parentId === "0")
-      setFilterMocks(filterFilesRef.current.mocks)
+  const saving = (storage:string, data:any) =>{
+    window.localStorage.setItem(`${storage}`,JSON.stringify(data))
+  }
+
+  const savingFiles = (folders:Folder[], mocks) =>{
+    
+    let storedFilesData = window.localStorage.getItem('files')
+    let storedFiles = storedFilesData ? JSON.parse(storedFilesData) as Files : {folders:[],mocks:[]}
+    if(storedFiles){
+      folders = folders.filter(folder => !storedFiles.folders.some(storedFolder => storedFolder.id === folder.id))
+      mocks = mocks.filter(mock => !storedFiles.mocks.some(storedMock => storedMock.id === mock.id))
+      storedFiles = {folders:[...storedFiles?.folders, ...folders], mocks:[...storedFiles?.mocks, ...mocks]}
+      window.localStorage.setItem('files',JSON.stringify(storedFiles))
+      setCurrentFiles(storedFiles)
     }
   }
 
@@ -106,6 +114,33 @@ export default function Home() {
     filterFilesRef.current.folders = files.current.folders.filter(folder => folder.parentId === routeFileId)
     filterFilesRef.current.mocks = files.current.mocks.filter(mock => mock.parentId === routeFileId)
 
+    setFilterFolder(currentFiles.folders)
+    setFilterMocks(currentFiles.mocks)
+  },[currentFiles])
+
+  const handleInitialize = () =>{
+
+    const initializeFiles = {
+      folders: testFolders,
+      mocks: testMocks
+    } as Files
+
+    savingFiles(initializeFiles.folders,initializeFiles.mocks)
+
+    localStorage.setItem('mocksId', JSON.stringify(testMocks.length - 1))
+    const storedFiles = localStorage.getItem('files')
+    if(storedFiles)
+    files.current = JSON.parse(storedFiles);
+    handleRoute("0",null);
+  }
+
+  useEffect(() =>{
+    console.log(routeFileId)
+    routeFileRef.current = files.current.folders.find(file => file.id === routeFileId) || { id:'0', name: '?', parentId: null}
+
+    filterFilesRef.current.folders = files.current.folders.filter(folder => folder.parentId === routeFileId)
+    filterFilesRef.current.mocks = files.current.mocks.filter(mock => mock.parentId === routeFileId)
+    
     setFilterFolder(filterFilesRef.current.folders)
     setFilterMocks(filterFilesRef.current.mocks)
     setCurrentFile(routeFileRef.current)
@@ -202,11 +237,9 @@ export default function Home() {
 
   const debuggin = () =>{
     console.log("=========================================")
-    console.log(menuLabels)
-    console.log(routeFileRef.current)
-    console.log(selectedObjectRef.current, files.current)
     console.log(filterFilesRef.current)
-    console.log(currentLayout)
+    console.log(currentFile)
+    console.log(routeFileId)
   }
 
   const handleContextMenu = (e, labelList, selectedObject) => {
@@ -226,18 +259,6 @@ export default function Home() {
     window.addEventListener('click', handleClick)
     setEditFGUI(false);
   },[])
-
-
-  async function mockData() {
-    try {
-      const response = await fetch('https://fakerapi.it/api/v2/books?_quantity=5?_seed=1')
-      const data = await response.json();
-      setMockDataList(data.data)
-      console.log(data)
-    } catch (error){
-      console.log(error)
-    }
-  }
 
 
   return (
@@ -262,7 +283,7 @@ export default function Home() {
       <div>
 
       </div>
-      <SideBar files={files.current.folders}></SideBar>
+      <SideBar files={currentFiles.folders}></SideBar>
       <div className="flex min-h-screen ml-80 dark:bg-primary">
         <main className="max-w-250 w-full py-2 px-4 flex flex-col gap-2">
           <div className="flex items-center gap-2 max-w-250">
@@ -317,17 +338,18 @@ export default function Home() {
             )))}
             {
               filterMocks.map((mock, index) => (
-                <li className="flex gap-1.5" key={index} onContextMenu={(e) => handleContextMenu(e, mockMenuList, mock)}> <File size={20}/> {mock.name + " id:" + mock.id}</li>
+                <li className="flex gap-1.5" key={index} onContextMenu={(e) => handleContextMenu(e, mockMenuList, mock)}> <File size={20}/> {mock.id} {mock.fullName}{mock.parentId}</li>
               ))
             }
-          </ul>
+          </ul> 
           
           <button className="w-fit" onClick={() => debuggin()}>Debug</button>
+          <button className="w-fit" onClick={() => window.localStorage.removeItem('files')}>clear storage</button>
           <button onClick={() => mockData()}> MockData</button>
           <ul>Mock Data list</ul>
           {mockDataList.map( mockData => (
-            <li>
-              <p>{mockData.id} {mockData.firstname}</p>
+            <li key={mockData.id}>
+              <p>{mockData.id} {mockData.fullName}{mockData.parentId}</p>
             </li>
             
           ))}

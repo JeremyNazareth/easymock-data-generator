@@ -1,5 +1,6 @@
 export interface Person {
-    "id": Number | null,
+    "parentId": string | null,
+    "id": string | null,
     "firstname": String | null,
     "lastname": String | null,
     "email": String | null,
@@ -13,4 +14,13 @@ export interface Person {
         "city": String | null,
         "country": String | null,
     }
+}
+
+export interface FakerPerson {
+    parentId?: string | null,
+    id?: string | null,
+    bio?: string | null,
+    fullName?: string | null,
+    jobTitle?: string | null,
+    sex?: string | null
 }

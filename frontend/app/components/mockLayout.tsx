@@ -1,8 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from "react";
-import { Person } from "../interfaces/index"
+import { Person, FakerPerson } from "../interfaces/index"
 import { mock } from "node:test";
+import { faker } from '@faker-js/faker'
+import { useSearchParams } from "next/navigation";
+import { json } from "node:stream/consumers";
 
 export interface Input {
   id: string;
@@ -19,9 +22,12 @@ export default function MockLayout( { settingMocksList }){
   const parameterList = useRef<string[]>([]);
   const [mocks, setMocks] = useState<Object[]>([])
   const [test, setTest] = useState<string>();
-    
+  const searchParams = useSearchParams();
+  const routeFileId = searchParams.get('file');
+  
 
   let mockPlaceHolder = {
+    "parentId": null,
     "id":"1",
     "firstname": "Joe",
     "lastname":null,
@@ -30,15 +36,22 @@ export default function MockLayout( { settingMocksList }){
     "birthday":null,
     "gender": null,
     "address": {
-    "id": null,
-    "street": null,
-    "streetName": null,
-    "city": null,
-    "country": null,}
-  }
-    
-  useEffect(() =>{
+      "id": null,
+      "street": null,
+      "streetName": null,
+      "city": null,
+      "country": null,}
+  } as Person
 
+  const fakerLayout = {
+    id: null,
+    bio: null,
+    fullName: null,
+    jobTitle: null,
+    sex: null
+  } as FakerPerson
+
+  useEffect(() =>{
     const newLayout = {
       person: {
         "id":"1",
@@ -56,13 +69,7 @@ export default function MockLayout( { settingMocksList }){
         "country": null,}
       }
     }
-
-    let values = []
-    setOptions(Object.keys(newLayout.person))
-    for (const value of Object.values(newLayout.person)){
-    if(value != null){
-      values.push(value) 
-    }}
+    setOptions(Object.keys(fakerLayout))
   },[])
 
   const addParameter = () =>{
@@ -79,26 +86,41 @@ export default function MockLayout( { settingMocksList }){
       setInputs([...inputs, newInput])
       parameterList.current = [...parameterList.current, parameter]
     } else{
-      console.log(newInput,inputs.some(input => input != newInput),inputs)
+      
     }
-
-
   }
 
   const createMock = () =>{
     console.log("+++++++++++++++++++++++++++++++++++++++++++")
-
-    let mockData = {}
+    const localStorage = window.localStorage; 
+    let mocksId = localStorage.getItem('mocksId');
+    let mocksIdCount = parseInt(JSON.parse(mocksId)) | 0;
+    const mocksQuantity = document.getElementById('mocksQuantity') as HTMLInputElement
     
-    for(let key in mockPlaceHolder){
-      if(mockPlaceHolder[key] != null){
-        mockData[key] = mockPlaceHolder[key]
+    let personMocks = []
+    for (let i = 0; i !== parseInt(mocksQuantity.value); i++){
+      let fakerPerson = {
+        id: Date.now().toString(),
+        bio: faker.person.bio(),
+        fullName: faker.person.fullName({sex:"female"}),
+        jobTitle: faker.person.jobTitle(),
+        sex: faker.person.sex()
+      } as FakerPerson
+
+      let person = {} as FakerPerson
+      for(let key of parameterList.current){
+        person[key] = fakerPerson[key]
       }
+      
+      mocksIdCount += 1
+      person.id = mocksIdCount.toString()
+      person.parentId = routeFileId || '0';
+      personMocks.push(person)
     }
 
-    settingMocksList(mockData)
-    setMocks([...mocks, mockData])
-    console.log(mockData)
+    localStorage.setItem("mocksId",JSON.stringify(mocksIdCount))
+    settingMocksList(personMocks)
+
   }
 
   /*
@@ -114,18 +136,21 @@ export default function MockLayout( { settingMocksList }){
   */
 
   const debugging = () =>{
-    console.log(parameterList.current,test)
+    console.log(faker.person.fullName())
+    console.log(localStorage.getItem('mocksId'))
   }
   return(
-    <form className="bg-blue-900 flex flex-col p-5 w-fit h-100 fixed inset-0 m-auto rounded-[7px]">
+    <form className="bg-blue-900 flex flex-col p-5 w-fit h-100 fixed inset-0 m-auto rounded-[7px] gap-1" onSubmit={(e) => e.preventDefault()}>
       <label>Plantilla para categorias</label>
-      <select id="parameterSelector" name="" onChange={(e) => {setTest(e.target.value);console.log(e.target.value)}}>
+      <select id="parameterSelector" name="" onChange={(e) => {setTest(e.target.value)}}>
         {
-          options.map(option => (
-            <option className="text-black" value={`${option}`}>{option}</option>
+          options.map((option, index) => (
+            <option key={index} className="text-black" value={`${option}`}>{option}</option>
           ))
         }
       </select>
+      <label htmlFor="">Cantidad de Mocks</label>
+      <input id="mocksQuantity" type="number" min={0} />
       <button type="button" className="bg-green-700 rounded-[7px]" onClick={() => addParameter()}>Agregar atributo</button>
       <div className="overflow-auto my-5" id="inputsContainer">
         {
